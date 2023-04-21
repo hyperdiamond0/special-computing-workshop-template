@@ -23,10 +23,17 @@ public class DoublyLinkedList<E> implements java.util.List<E> {
 
   private ListNode<E> head;
   private ListNode<E> tail;
+  private int size;
 
+
+  /**
+   * конструктор, создающий пустой список длины 0.
+   *
+   */
   public DoublyLinkedList() {
     this.head = null;
     this.tail = null;
+    size = 0;
   }
 
   public ListNode<E> getHead() {
@@ -49,18 +56,15 @@ public class DoublyLinkedList<E> implements java.util.List<E> {
     if (this.contains(o)) {
       return false;
     }
-    if (head == null && tail == null) {
+    if (size == 0) {
       head = tail = newNode;
-      head.setPrevious(null);
-      head.setNext(null);
-      tail.setPrevious(null);
-      tail.setNext(null);
+      size++;
       return true;
     }
     tail.setNext(newNode);
-    newNode.setNext(null);
     newNode.setPrevious(tail);
     tail = newNode;
+    size++;
     return true;
   }
 
@@ -73,64 +77,70 @@ public class DoublyLinkedList<E> implements java.util.List<E> {
     } catch (ClassCastException e) {
       throw new IllegalArgumentException("Некорректный тип аргумента");
     }
-    var tmp = head;
-    if (tmp == null) {
+    if (size == 0) {
       if (index == 0) {
         head = newNode;
         tail = head;
-        head.setNext(null);
-        head.setPrevious(null);
-        tail.setNext(null);
-        tail.setPrevious(null);
+        size++;
         return;
       }
       throw new IndexOutOfBoundsException(
           "Невозможно произвести добавление в пустой список по ненулевому индексу");
     }
-    while (index > 0) {
-      if (tmp.getNext() == null) {
-        if (index != 1) {
-          throw new IndexOutOfBoundsException(
-              "Невозможно разместить элемент по индексу, превыщающему длину списка более чем на 1");
-        }
-        break;
-      }
-      tmp = tmp.getNext();
-      index--;
+    if (index == 0) {
+      newNode.setNext(head);
+      head.setPrevious(newNode);
+      head = newNode;
+      size++;
+      return;
     }
-    if (index == 1) { //если после цикла индекс 1, значит добавление происходит в конец
+    if (index == size) {
       this.add(element);
       return;
     }
-    newNode.setNext(tmp);
-    newNode.setPrevious(tmp.getPrevious());
-    if (tmp.getPrevious() == null) {
-      head = newNode;
-    } else {
-      tmp.getPrevious().setNext(newNode);
+    if (index > size) {
+      throw new IndexOutOfBoundsException(
+          "Невозможно разместить элемент по индексу, превыщающему длину списка");
     }
+
+    var tmp = head;
+    for (int i = 0; i < index - 1; i++) {
+      tmp = tmp.getNext();
+    }
+    newNode.setNext(tmp.getNext());
+    newNode.setPrevious(tmp);
+    tmp.getNext().setPrevious(newNode);
+    tmp.setNext(newNode);
+    size++;
   }
 
 
   //2. Удаление по индексу
   @Override
   public E remove(int index) {
-    ListNode<E> tmp = getNodeWithIndex(index);
-    if (tmp.getNext() != null) {
+    if (size == 0) {
+      throw new IllegalArgumentException("Невозможно удаление из пустого списка");
+    }
+    E returnValue = null;
+    if (size == 1) {
+      returnValue = head.getData();
+      head = tail = null;
+    } else if (index == 0) {
+      head.getNext().setPrevious(null);
+      returnValue = head.getData();
+      head = head.getNext();
+    } else if (index == size - 1) {
+      tail.getPrevious().setNext(null);
+      returnValue = tail.getData();
+      tail = tail.getPrevious();
+    } else {
+      ListNode<E> tmp = getNodeWithIndex(index);
+      returnValue = tmp.getData();
+      tmp.getPrevious().setNext(tmp.getNext());
       tmp.getNext().setPrevious(tmp.getPrevious());
     }
-    if (tmp.getPrevious() != null) {
-      tmp.getPrevious().setNext(tmp.getNext());
-    }
-    if (head == tmp) {
-      head = tmp.getNext();
-    }
-    if (tail == tmp) {
-      tail = tmp.getPrevious();
-    }
-    tmp.setNext(null);
-    tmp.setPrevious(null);
-    return tmp.getData();
+    size--;
+    return returnValue;
   }
 
   @Override
@@ -139,16 +149,15 @@ public class DoublyLinkedList<E> implements java.util.List<E> {
   }
 
   private ListNode<E> getNodeWithIndex(int index) {
-    var tmp = head;
-    if (tmp == null) {
+    if (size == 0) {
       throw new IndexOutOfBoundsException("Список пуст");
     }
-    while (index > 0) {
-      if (tmp.getNext() == null) {
-        throw new IndexOutOfBoundsException("Индекс превышает длину списка");
-      }
+    if (index >= size) {
+      throw new IndexOutOfBoundsException("Индекс превышает длину списка");
+    }
+    var tmp = head;
+    for (int i = 0; i < index; i++) {
       tmp = head.getNext();
-      index--;
     }
     return tmp;
   }
@@ -156,6 +165,9 @@ public class DoublyLinkedList<E> implements java.util.List<E> {
   //3. Проверка наличия по значению
   @Override
   public boolean contains(Object o) {
+    if (size == 0) {
+      return false;
+    }
     ListNode<E> newNode;
     try {
       newNode = new ListNode<>((E) o);
@@ -163,10 +175,7 @@ public class DoublyLinkedList<E> implements java.util.List<E> {
       throw new IllegalArgumentException("Некорректный тип аргумента");
     }
     var tmp = head;
-    if (tmp == null) {
-      return false;
-    }
-    while (tmp.getNext() != null) {
+    for (int i = 0; i < size - 1; i++) {
       if (tmp.getData().equals(newNode.getData())) {
         return true;
       }
@@ -179,7 +188,7 @@ public class DoublyLinkedList<E> implements java.util.List<E> {
   //4. Проверка пустоты списка
   @Override
   public boolean isEmpty() {
-    return head == null && tail == null;
+    return size == 0;
   }
 
 
@@ -200,6 +209,9 @@ public class DoublyLinkedList<E> implements java.util.List<E> {
     if (!(obj instanceof DoublyLinkedList)) {
       return false;
     }
+    if (size != ((DoublyLinkedList) obj).size) {
+      return false;
+    }
     ListNode<E> tmp1 = head;
     ListNode<E> tmp2 = ((DoublyLinkedList) obj).head;
     while (tmp1.getNext() != null && tmp2.getNext() != null) {
@@ -214,7 +226,13 @@ public class DoublyLinkedList<E> implements java.util.List<E> {
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    int result = 29;
+    var tmp = head;
+    for (int i = 0; i < size; i++) {
+      result = 37 * result + tmp.hashCode();
+      tmp = tmp.getNext();
+    }
+    return result;
   }
 
   //________________________
